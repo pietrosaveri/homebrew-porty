@@ -265,7 +265,7 @@ fn cmd_kill(entries: &[PortEntry], port: u16, force: bool) {
 #[cfg(target_os = "macos")]
 fn discover_ports() -> Result<Vec<PortEntry>> {
     use std::process::Command;
-    
+
     // Use lsof -F for reliable port→PID mapping
     // -F: field output (parseable)
     // -n: no DNS lookups
@@ -290,7 +290,7 @@ fn discover_ports() -> Result<Vec<PortEntry>> {
 
     let text = String::from_utf8_lossy(&output.stdout);
     let mut entries = Vec::new();
-    
+
     let mut current_pid: Option<u32> = None;
     let mut current_cmd: Option<String> = None;
 
@@ -353,8 +353,159 @@ fn discover_ports() -> Result<Vec<PortEntry>> {
         .collect();
 
     let mut result = unique_entries;
+
+    // Enrich container entries with Docker container names
+    enrich_docker_containers(&mut result);
+
     result.sort_by_key(|e| e.port);
     Ok(result)
+}
+
+#[cfg(target_os = "macos")]
+fn enrich_docker_containers(entries: &mut [PortEntry]) {
+    use std::process::Command;
+
+    // Query Docker for all running containers with their ports, names, and images
+    // Format: <container_id>|<name>|<image>|<ports>
+    let output = Command::new("docker")
+        .args(["ps", "--format", "{{.ID}}|{{.Names}}|{{.Image}}|{{.Ports}}"])
+        .output();
+
+    let Ok(output) = output else {
+        // Docker not available or not running
+        return;
+    };
+
+    if !output.status.success() {
+        return;
+    }
+
+    let text = String::from_utf8_lossy(&output.stdout);
+
+    // Build a map of port -> (container name, image)
+    let mut port_to_container: std::collections::HashMap<u16, (String, String)> = std::collections::HashMap::new();
+
+    for line in text.lines() {
+        if line.is_empty() {
+            continue;
+        }
+
+        // Parse the format: container_id|name|image|ports
+        let parts: Vec<&str> = line.splitn(4, '|').collect();
+        if parts.len() < 4 {
+            continue;
+        }
+
+        let container_name = parts[1];
+        let image = parts[2];
+        let ports_str = parts[3];
+
+        // Parse ports from Docker format: "0.0.0.0:8080->80/tcp, 0.0.0.0:8443->443/tcp"
+        // We want to extract the host port (e.g., 8080, 8443)
+        for port_mapping in ports_str.split(',') {
+            let port_mapping = port_mapping.trim();
+
+            // Look for patterns like "0.0.0.0:6379->6379/tcp" or ":::6379->6379/tcp"
+            if let Some(arrow_pos) = port_mapping.find("->") {
+                let before_arrow = &port_mapping[..arrow_pos];
+
+                // Extract the host port (after the last colon before ->)
+                if let Some(colon_pos) = before_arrow.rfind(':') {
+                    let port_str = &before_arrow[colon_pos + 1..];
+                    if let Ok(port) = port_str.parse::<u16>() {
+                        port_to_container.insert(port, (container_name.to_string(), image.to_string()));
+                    }
+                }
+            }
+        }
+    }
+
+    // Enrich entries that are Docker processes
+    for entry in entries.iter_mut() {
+        if entry.kind == Kind::Container {
+            if let Some(process) = &entry.process {
+                // Check if it's a Docker process
+                if process.to_lowercase().contains("docker") {
+                    // Look up the container name for this port
+                    if let Some((container_name, image)) = port_to_container.get(&entry.port) {
+                        // Try to get a friendly name from the image
+                        let friendly_name = get_friendly_container_name(container_name, image);
+                        entry.process = Some(friendly_name);
+                    } else {
+                        // No Docker container found, try to guess based on port
+                        if let Some(service_name) = guess_service_by_port(entry.port) {
+                            entry.process = Some(format!("{} (container)", service_name));
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Get a friendly container name from the container name and image
+fn get_friendly_container_name(container_name: &str, image: &str) -> String {
+    // Extract the base image name (e.g., "redis" from "redis:7-alpine")
+    let image_base = image
+        .split(':')
+        .next()
+        .unwrap_or(image)
+        .split('/')
+        .last()
+        .unwrap_or(image);
+
+    // Use the image base name if it's more descriptive than the container name
+    let display_name = if is_generic_name(container_name) && !is_generic_name(image_base) {
+        image_base
+    } else {
+        container_name
+    };
+
+    format!("{} (container)", display_name)
+}
+
+/// Check if a name is generic/auto-generated
+fn is_generic_name(name: &str) -> bool {
+    // Docker auto-generated names or hash-like names
+    name.len() > 20 || name.chars().all(|c| c.is_ascii_hexdigit() || c == '-')
+}
+
+/// Guess the service type based on well-known ports
+fn guess_service_by_port(port: u16) -> Option<&'static str> {
+    match port {
+        // PostgreSQL
+        5432 => Some("postgresql"),
+        // MySQL/MariaDB
+        3306 => Some("mysql"),
+        // Redis
+        6379 => Some("redis"),
+        // MongoDB
+        27017 => Some("mongodb"),
+        // Neo4j
+        7474 => Some("neo4j-http"),
+        7473 => Some("neo4j-https"),
+        7687 => Some("neo4j-bolt"),
+        // Elasticsearch
+        9200 => Some("elasticsearch"),
+        9300 => Some("elasticsearch-cluster"),
+        // RabbitMQ
+        5672 => Some("rabbitmq"),
+        15672 => Some("rabbitmq-mgmt"),
+        // Memcached
+        11211 => Some("memcached"),
+        // CouchDB
+        5984 => Some("couchdb"),
+        // Cassandra
+        9042 => Some("cassandra"),
+        // InfluxDB
+        8086 => Some("influxdb"),
+        // Kafka
+        9092 => Some("kafka"),
+        // MinIO
+        9000 => Some("minio"),
+        9001 => Some("minio-console"),
+        _ => None,
+    }
 }
 
 #[cfg(target_os = "macos")]
