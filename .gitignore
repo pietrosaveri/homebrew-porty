@@ -1,0 +1,35 @@
+# Rust build artifacts
+/target/
+**/*.rs.bk
+*.pdb
+
+# Cargo.lock is typically committed for binaries but can be ignored
+# Uncomment if you prefer not to commit it:
+# Cargo.lock
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Debug files
+*.dSYM/
+
+# Homebrew-specific
+*.bottle.tar.gz
+*.bottle.json
+
+# Documentation build
+/doc/
+
+# Test coverage
+*.profraw
+*.profdata
+/coverage/
+
+# Backup files
+*.bak
+*.backup
