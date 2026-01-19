@@ -27,7 +27,7 @@ Porty helps you quickly identify what's running on your machine's ports, with in
 ### Homebrew
 
 ```bash
-brew tap username/porty
+brew tap pietrosaveri/porty
 brew install porty
 ```
 
