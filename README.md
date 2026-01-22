@@ -65,6 +65,14 @@ Show only identified development servers:
 porty dev
 ```
 
+#### Production View (Dev + Containers)
+
+Show development servers and containers (useful for production-like environments):
+
+```bash
+porty prod
+```
+
 #### Check a Specific Port
 
 Inspect what's running on a particular port:
@@ -140,6 +148,7 @@ porty all --verbose --colors
 | _(default)_ | Show dev servers and unknown ports | `porty` |
 | `all` | Show all listening ports | `porty all` |
 | `dev` | Show only development servers | `porty dev` |
+| `prod` | Show dev servers and containers | `porty prod` |
 | `port <PORT>` | Inspect a specific port | `porty port 3000` |
 | `free <PORT>` | Check if a port is available | `porty free 8080` |
 | `kill <PORT>` | Terminate process on port | `porty kill 3000 --force` |
