@@ -21,10 +21,17 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Cmd {
+    /// Show all listening ports
     All,
+    /// Show only dev servers
     Dev,
+    /// Show dev servers and containers
+    Prod,
+    /// Show process info for a specific port
     Port { port: u16 },
+    /// Check if a port is available
     Free { port: u16 },
+    /// Kill the process on a specific port
     Kill {
         port: u16,
         /// Skip confirmation and kill immediately
@@ -61,6 +68,13 @@ fn filter_default(entries: &[PortEntry]) -> Vec<PortEntry> {
 fn filter_dev(entries: &[PortEntry]) -> Vec<PortEntry> {
     entries.iter()
         .filter(|e| matches!(e.kind, Kind::Dev))
+        .cloned()
+        .collect()
+}
+
+fn filter_prod(entries: &[PortEntry]) -> Vec<PortEntry> {
+    entries.iter()
+        .filter(|e| matches!(e.kind, Kind::Dev | Kind::Container))
         .cloned()
         .collect()
 }
@@ -176,6 +190,11 @@ fn main() {
         Some(Cmd::Dev) => {
             print_banner(cli.colors);
             let filtered = filter_dev(&entries);
+            print_table(filtered, cli.verbose, cli.colors);
+        }
+        Some(Cmd::Prod) => {
+            print_banner(cli.colors);
+            let filtered = filter_prod(&entries);
             print_table(filtered, cli.verbose, cli.colors);
         }
         Some(Cmd::Port { port }) => {
