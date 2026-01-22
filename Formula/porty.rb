@@ -1,8 +1,8 @@
 class Porty < Formula
   desc "Fast, intelligent local port inspector for macOS"
   homepage "https://github.com/pietrosaveri/Porty"
-  url "https://github.com/pietrosaveri/Porty/archive/refs/tags/v0.1.0.tar.gz"
-  sha256 "5559ca3f3627b324e43c16bd0f349a18cff488811b612f8e6da1146b4d4d950e"
+  url "https://github.com/pietrosaveri/homebrew-porty/archive/refs/tags/0.1.1.tar.gz"
+  sha256 "d5558cd419c8d46bdc958064cb97f963d1ea793866414c025906ec15033512ed"
   license "MIT"
 
   depends_on "rust" => :build
@@ -16,3 +16,4 @@ class Porty < Formula
     assert_match "A fast, intelligent local port inspector", shell_output("#{bin}/porty --help")
   end
 end
+
