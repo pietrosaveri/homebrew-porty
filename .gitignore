@@ -7,6 +7,8 @@
 # Uncomment if you prefer not to commit it:
 # Cargo.lock
 
+HowToRelease.txt
+
 # IDE and editor files
 .vscode/
 .idea/

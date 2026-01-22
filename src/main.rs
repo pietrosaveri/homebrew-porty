@@ -23,7 +23,7 @@ struct Cli {
 enum Cmd {
     /// Show all listening ports
     All,
-    /// Show only dev servers
+    /// Show only dev servers (node etc.)
     Dev,
     /// Show dev servers and containers
     Prod,
@@ -39,6 +39,7 @@ enum Cmd {
         force: bool,
     },
 }
+
 
 #[derive(Debug, Clone)]
 struct PortEntry {
