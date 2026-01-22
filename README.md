@@ -17,10 +17,11 @@ Porty helps you quickly identify what's running on your machine's ports, with in
 
 - **Smart Categorization**: Automatically classifies ports as Dev Servers, Databases, Containers, System services, or Unknown
 - **Process Detection**: Shows the exact process and PID using each port
+- **Detailed Port Inspection**: Comprehensive information including command line, working directory, process tree, resource usage, network details, and environment variables
 - **Flexible Filtering**: View all ports, only development servers, or specific ports
 - **Port Management**: Check availability and safely kill processes using specific ports
 - **Colored Output**: Optional color-coded categories for better readability
-- **Verbose Mode**: View full executable paths when needed
+- **Performance Optimized**: Parallel execution for fast detailed port inspection
 
 ## Installation
 
@@ -75,11 +76,20 @@ porty prod
 
 #### Check a Specific Port
 
-Inspect what's running on a particular port:
+Get comprehensive details about what's running on a particular port:
 
 ```bash
 porty port 3000
 ```
+
+This command provides extensive information including:
+- Full command line with arguments
+- Working directory and executable path
+- Process tree (parent and child processes)
+- Resource usage (memory, CPU, threads, file descriptors)
+- Network details (listening addresses, active connections, other ports)
+- Environment variables
+- Docker container information (when applicable)
 
 #### Check Port Availability
 
@@ -184,12 +194,48 @@ Porty intelligently categorizes ports based on process names and common port num
 
 ```bash
 $ porty port 3000
-╭──────┬──────────┬────────────┬──────╮
-│ PORT │ PROCESS  │ CATEGORY   │ PID  │
-├──────┼──────────┼────────────┼──────┤
-│ 3000 │ node     │ Dev Server │ 1234 │
-╰──────┴──────────┴────────────┴──────╯
 ```
+
+Displays comprehensive process information:
+
+```
+╭─────────────────────────────────────────────────────────────────────╮
+│ Port 3000 - Process Details                                        │
+╰─────────────────────────────────────────────────────────────────────╯
+
+PROCESS INFORMATION
+  Name:       node
+  PID:        1234
+  Category:   Dev Server
+  Command:    node --inspect dist/server.js --port 3000
+  Directory:  /Users/you/projects/api-server
+  Exec Path:  /Users/you/.nvm/versions/node/v20.0.0/bin/node
+  User:       you (501)
+  Uptime:     2:15:30 (started Thu Jan 23 14:23:15 2026)
+
+PROCESS TREE
+  Parents:    Terminal (1000) → zsh (1100) → npm (1200) → node (1234)
+  Children:   None
+
+RESOURCES
+  Memory:     245.3 MB (RSS), 1.2 GB (Virtual)
+  CPU:        2.3%
+  Threads:    8
+  File Descriptors: 23 open
+
+NETWORK
+  Binding:    0.0.0.0:3000 (IPv4) + [::]:3000 (IPv6)
+  Protocol:   TCP (LISTEN)
+  Connections: 3 active
+  Other Ports: Also listening on 9229
+
+ENVIRONMENT
+  NODE_ENV=development
+  PORT=3000
+  DATABASE_URL=postgresql://localhost:5432/myapp_dev
+```
+
+Use `--colors` for color-coded sections and categories.
 
 ### Check if port 8080 is free
 
